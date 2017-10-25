@@ -1,7 +1,7 @@
 var https = require('https');
 
 /**
- * HOW TO Make an HTTP Call - GET
+ * Make a call to wikipedia
  */
 
 

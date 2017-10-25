@@ -28,19 +28,19 @@ const replyMessage = (message) => {
              * Or: Update your mongo DB
              * etc...
              */
-            //   console.log('object is : ', result)
+               console.log('object is : ', result)
             if (result.action) {
                 //      console.log('The conversation action is: ', result.action.slug)
             }
             //    console.log('intents is : ', result.intents[0])
             //    console.log('slug is : ', slug)
 
-            if (result.intents && result.intents.length > 0 && result.intents[0].slug == "search-who" && result.entities && result.entities.person) {
-                var person = result.entities.person[0].fullname;
+            if (result.intents && result.intents.length > 0 && result.intents[0].slug == "search-who" && result.entities && (result.entities.person || result.entities.personne)) {
+                var person = (result.entities.person) ? result.entities.person[0].fullname : result.entities.personne[0].value;
 
-                const wiki = require('./call')
+                const wiki = require('./wiki');
 
-                //      console.log('person is : ', person);
+                    console.log('person is : ', person);
 
                 wiki(person, function(req, selected, text, url, confidence, image) {
                     console.log('request =' + req + '\n');
@@ -50,7 +50,7 @@ const replyMessage = (message) => {
                     //       console.log('confidence:' + confidence + '\n');
                     if (confidence > 0.8) {
                         if (image) {
- /* not working
+ /* not   working
                             message.addReply({
                                 type: 'card',
                                 content: {
@@ -116,20 +116,21 @@ const replyMessage = (message) => {
                             console.error('Error while sending message to channel', err)
                         })
                 });
-            } else if (result.intents && result.intents.length > 0 && result.intents[0].slug == "search-where" && result.entities && result.entities.person) {
+            } else if (result.intents && result.intents.length > 0 && result.intents[0].slug == "search-where" && result.entities && (result.entities.location || result.entities.lieu)) {
                 var location = result.entities.location[0];
 
-                const wiki = require('./call')
+                const wiki = require('./wiki');
 
-                //      console.log('person is : ', person);
+                    console.log('location is : ', location);
 
-                wiki(location, function(req, selected, text, url, confidence) {
-                    //       console.log('request =' + req + '\n');
-                    //       console.log(selected + '\n');
-                    //       console.log(text + '\n');
-                    //       console.log('url:' + url + '\n');
-                    //       console.log('confidence:' + confidence + '\n');
-                    if (confidence > 0.8) {
+                wiki(location.raw, function(req, selected, text, url, confidence) {
+                           console.log('confidence:' + confidence + '\n');
+                    if (confidence > 0.6) {
+                        message.addReply({
+                                type: 'picture',
+                                content: 'http://e220d290.ngrok.io/chatoli?x=' + location.lng + '&y=' + location.lat
+                            });
+
                         message.addReply({
                             type: 'text',
                             content: text
@@ -142,7 +143,56 @@ const replyMessage = (message) => {
                     } else
                         message.addReply({
                             type: 'text',
-                            content: 'Je ne sais.'
+                            content: 'Je ne sais localiser ' + location.formatted
+                        });
+
+                    message.reply()
+                        .then(() => {
+                            // Do some code after sending messages
+                        })
+                        .catch(err => {
+                            console.error('Error while sending message to channel', err)
+                        })
+                });
+            } else if (result.intents && result.intents.length > 0 && result.intents[0].slug == "rdv-where" && result.entities && (result.entities.location || result.entities.lieu)) {
+                var location = result.memory["lieu-rdv"];
+
+                const rdv = require('./rdv');
+
+                    console.log('location is : ', location);
+
+                rdv(location.value,  function(req, list) {
+                   
+                  if (list.length) {
+                      var s_pict =   'http://e220d290.ngrok.io/chatoli';
+                      var o_button = []; 
+                      var q = '?';
+                      var i;
+                      for(i = 0; (i < list.length) && (i<4); i++) {
+                      var d = list[i];
+                       s_pict = s_pict + q + '&mx' + (i+1) + '='+d.longitude + '&my' + (i+1) + '='+ d.latitude;
+                       q='&';
+                       o_button.push({
+                                        title: d.prenom + ' ' + d.nom + ' ' + d.adresse,
+                                        type: 'web_url',
+                                        value: 'http://www.google.fr',
+                                    })
+                      }
+                        message.addReply({
+                                type: 'picture',
+                                content:  s_pict
+                            });
+                         message.addReply({
+                                type: 'card',
+                                content: {
+                                    title: 'Les médecins en proximité',
+                                    buttons: o_button
+                                },
+                            });
+                     } else
+                        message.addReply({
+                            type: 'text',
+                            content: 'Je ne sais localiser ' + location.formatted
                         });
 
                     message.reply()
