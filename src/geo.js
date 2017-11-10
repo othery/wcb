@@ -5,8 +5,8 @@ var Jimp = require('jimp');
 
 export const geo = (request, response, callback) => {
 var options = {
-  width: 600,
-  height: 480
+  width: 350,
+  height: 270
 };
 var map = new StaticMaps(options);
 
@@ -77,7 +77,7 @@ map.addMarker(marker3);
 }
 
 
-if(request.query["mx4"] && request.query["my4"]) {
+if(request.query["mx4"] && request.query["my4"] && null) {
 marker4.coord = [parseFloat(request.query.mx4),parseFloat(request.query.my4)];
 map.addMarker(marker4);
 }

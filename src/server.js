@@ -24,7 +24,7 @@ const app = express()
 app.set('port', process.env.PORT || 5000)
 app.use(bodyParser.json())
 
-app.use('/chatoli', (request, response) => {
+app.use('/act-img', (request, response) => {
 
   geo(request, response, (error, success) => {
     if (error) {
@@ -37,10 +37,20 @@ app.use('/chatoli', (request, response) => {
   })
  
 });
+
+app.use('/act-rdv', (request, response) => {
+ const rdv = require('./rdv');
+console.log('location is : ', location);
+if(request.query && request.query.id) {
+    rdv('q', request.id, function(req, list) {
+    }
+    );
+}
+});
   
 // Handle / route
 app.use('/', (request, response) => {
-  if(request.path.startsWith("/chatoli"))
+  if(request.path.startsWith("/act-img") || request.path.startsWith("/act-rdv"))
     next();
   // Call bot main function
   bot(request.body, response, (error, success) => {

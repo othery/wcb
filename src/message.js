@@ -4,12 +4,14 @@
  */
 const recastai = require('recastai')
 
+
 // This function is the core of the bot behaviour
 const replyMessage = (message) => {
     // Instantiate Recast.AI SDK, just for request service
     const request = new recastai.request(process.env.REQUEST_TOKEN, process.env.LANGUAGE)
     // Get text from message received
     const text = message.content
+    const base_http = 'http://2ee0b551.ngrok.io'
 
     //  console.log('I receive: <%s>', text)
 
@@ -28,7 +30,7 @@ const replyMessage = (message) => {
              * Or: Update your mongo DB
              * etc...
              */
-               console.log('object is : ', result)
+            console.log('object is : ', result)
             if (result.action) {
                 //      console.log('The conversation action is: ', result.action.slug)
             }
@@ -40,7 +42,7 @@ const replyMessage = (message) => {
 
                 const wiki = require('./wiki');
 
-                    console.log('person is : ', person);
+                console.log('person is : ', person);
 
                 wiki(person, function(req, selected, text, url, confidence, image) {
                     console.log('request =' + req + '\n');
@@ -50,46 +52,47 @@ const replyMessage = (message) => {
                     //       console.log('confidence:' + confidence + '\n');
                     if (confidence > 0.8) {
                         if (image) {
- /* not   working
-                            message.addReply({
-                                type: 'card',
-                                content: {
-                                    title: selected,
-                                    subtitle: text,
-                                    imageURL: image,
-                                    buttons: [{
-                                        title: 'wikipedia',
-                                        type: 'web_url',
-                                        value: url,
-                                    }],
-                                },
-                            });*/      
-                            
-                                   /*
+                            /* not   working
+                                                       message.addReply({
+                                                           type: 'card',
+                                                           content: {
+                                                               title: selected,
+                                                               subtitle: text,
+                                                               imageURL: image,
+                                                               buttons: [{
+                                                                   title: 'wikipedia',
+                                                                   type: 'web_url',
+                                                                   value: url,
+                                                               }],
+                                                           },
+                                                       });*/
+
+                            /*
                             message.addReply({
                                 type: 'picture',
                                 content: 'http://render.openstreetmap.org/cgi-bin/export?bbox=2.27,48.84,2.30,48.85&scale=30000&format=jpeg'
                             });             */
-                             message.addReply({
+                            message.addReply({
                                 type: 'picture',
                                 content: image
                             });
-                                                        message.addReply({
+                            message.addReply({
                                 type: 'text',
                                 content: text
-                            });      /*
-                            message.addReply({
-                                type: 'carousel',
-                                content: {
-                                    title: selected,
-                                    imageUrl: image,
-                                    buttons: [{
-                                        title: 'Plus dinfos',
-                                        type: 'web_url',
-                                        value: url,
-                                    }],
-                                },
-                            })    */
+                            });
+                            /*
+                                                  message.addReply({
+                                                      type: 'carousel',
+                                                      content: {
+                                                          title: selected,
+                                                          imageUrl: image,
+                                                          buttons: [{
+                                                              title: 'Plus dinfos',
+                                                              type: 'web_url',
+                                                              value: url,
+                                                          }],
+                                                      },
+                                                  })    */
 
                         } else {
                             message.addReply({
@@ -117,19 +120,25 @@ const replyMessage = (message) => {
                         })
                 });
             } else if (result.intents && result.intents.length > 0 && result.intents[0].slug == "search-where" && result.entities && (result.entities.location || result.entities.lieu)) {
-                var location = result.entities.location[0];
+                var location;
+                if(result.entities.location)
+                    location = result.entities.location[0].raw;
+                else {
+                  //  console.log ("entities.lieu", result.entities.lieu)
+                    location =        result.entities.lieu[0].raw;
+                    }
 
                 const wiki = require('./wiki');
 
-                    console.log('location is : ', location);
+                console.log('location is : ', location);
 
-                wiki(location.raw, function(req, selected, text, url, confidence) {
-                           console.log('confidence:' + confidence + '\n');
+                wiki(location, function(req, selected, text, url, confidence, img, loc) {
+                    console.log('confidence:' + confidence + '\n');
                     if (confidence > 0.6) {
                         message.addReply({
-                                type: 'picture',
-                                content: 'http://e220d290.ngrok.io/chatoli?x=' + location.lng + '&y=' + location.lat
-                            });
+                            type: 'picture',
+                            content: base_http + '/act-img?x=' + loc.lon + '&y=' + loc.lat
+                        });
 
                         message.addReply({
                             type: 'text',
@@ -159,40 +168,55 @@ const replyMessage = (message) => {
 
                 const rdv = require('./rdv');
 
-                    console.log('location is : ', location);
+                console.log('location is : ', location);
 
-                rdv(location.value,  function(req, list) {
-                   
-                  if (list.length) {
-                      var s_pict =   'http://e220d290.ngrok.io/chatoli';
-                      var o_button = []; 
-                      var q = '?';
-                      var i;
-                      for(i = 0; (i < list.length) && (i<4); i++) {
-                      var d = list[i];
-                       s_pict = s_pict + q + '&mx' + (i+1) + '='+d.longitude + '&my' + (i+1) + '='+ d.latitude;
-                       q='&';
-                       o_button.push({
-                                        title: d.prenom + ' ' + d.nom + ' ' + d.adresse,
-                                        type: 'web_url',
-                                        value: 'http://www.google.fr',
-                                    })
-                      }
-                        message.addReply({
-                                type: 'picture',
-                                content:  s_pict
-                            });
-                         message.addReply({
-                                type: 'card',
-                                content: {
-                                    title: 'Les médecins en proximité',
-                                    buttons: o_button
-                                },
-                            });
-                     } else
+                rdv('q', location.value, function(req, list) {
+
+                    if (list.length) {
+                        var s_pict = base_http + '/act-img';
+                        var o_button = [];
+                        var q = '?';
+                        var i;
+                        for (i = 0;
+                            (i < list.length) && (i < 3); i++) {
+                            var d = list[i];
+                            s_pict = s_pict + q + '&mx' + (i + 1) + '=' + d.longitude + '&my' + (i + 1) + '=' + d.latitude;
+                            q = '&';
+                            o_button.push({
+                                title: ['A', 'B', 'C', 'D'][i] + d.prenom.charAt(0) + '. ' + d.nom + ' ' + d.adresse,
+                                type:'postback',
+                                value: "choix "+ i
+                            })
+                        }
                         message.addReply({
                             type: 'text',
-                            content: 'Je ne sais localiser ' + location.formatted
+                            content: 'J\'ai compris: ' + location.value
+                        });
+           
+                        message.addReply({
+                            type: 'picture',
+                            content: s_pict
+                        });
+                         /* message.addReply({
+                                  type: 'card',
+                                  content: {
+                                      title: 'Les medecins en proximite',
+                                      buttons: o_button
+                                  }
+                              }); */
+                          
+                           message.addReply({
+                                  type: 'quickReplies',
+                                  content: {
+                                      title: 'Les ophtalmologues en proximite',
+                                      buttons: o_button
+                                  }
+                              });
+                               
+                    } else
+                        message.addReply({
+                            type: 'text',
+                            content: 'Je ne sais localiser ' + location.value
                         });
 
                     message.reply()

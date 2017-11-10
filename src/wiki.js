@@ -99,7 +99,8 @@ const getInfo = (who, callback) => {
                         var o = JSON.parse(resBody);
                         var image = (o["thumbnail"]) ? o.thumbnail.source : null;
 
-                        callback(who, o.title, o.extract, url_origin, confidence, image)
+
+                        callback(who, o.title, o.extract, url_origin, confidence, image, o.coordinates)
                         }
 
                     });
